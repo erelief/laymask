@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>层层加码</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="toolbar">
+    <div class="toolbar-row">
+      <div class="toolbar-group">
+        <label class="btn upload-btn" id="upload-base-label" title="选择底图">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/></svg>
+          <input type="file" id="upload-base" accept="image/*" hidden />
+        </label>
+        <div class="pattern-group">
+          <label class="btn upload-btn" id="upload-pattern-label" title="添加图案">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1" fill="currentColor"/><rect x="8" y="2" width="14" height="14" rx="2"/></svg>
+            <input type="file" id="upload-pattern" accept="image/*" hidden />
+          </label>
+          <div class="pattern-preview-popup hidden" id="pattern-preview-popup">
+            <img id="pattern-preview-img" alt="图案预览" />
+          </div>
+          <button class="btn pattern-history-btn" id="pattern-history-btn" title="历史图案">▾</button>
+          <button class="btn" id="text-pattern-btn" title="文字图案"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="12" r="3"/><path d="M10 9v6"/><circle cx="17" cy="12" r="3"/><path d="M14 7v8"/><path d="M22 17v1c0 .5-.5 1-1 1H3c-.5 0-1-.5-1-1v-1"/></svg></button>
+          <button class="btn" id="blur-pattern-btn" title="模糊底图"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></svg></button>
+          <div class="pattern-dropdown" id="pattern-dropdown">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+
+      <div class="toolbar-group" id="tool-group">
+        <button class="btn tool-btn" id="btn-select-all" disabled title="全选 (A)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.034 12.681a.498.498 0 0 1 .647-.647l9 3.5a.5.5 0 0 1-.033.943l-3.444 1.068a1 1 0 0 0-.66.66l-1.067 3.443a.5.5 0 0 1-.943.033z"/><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h2"/><path d="M14 3h1"/><path d="M3 9v1"/><path d="M21 9v2"/><path d="M3 14v1"/></svg></button>
+        <button class="btn tool-btn active" data-tool="rect" disabled title="矩形选区 (R)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/><path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/><path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/></svg></button>
+        <button class="btn tool-btn" data-tool="ellipse" disabled title="椭圆选区 (E)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/></svg></button>
+        <button class="btn tool-btn" data-tool="brush" disabled title="画笔选区 (B)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.622 17.897-10.68-2.913"/><path d="M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0z"/><path d="M9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15"/></svg></button>
+        <button class="btn tool-btn" data-tool="eraser" disabled title="擦除选区 (X)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21"/><path d="m5.082 11.09 8.828 8.828"/></svg></button>
+        <button class="btn tool-btn" data-tool="move-pattern" disabled title="调整图案 (V)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m15 19-3 3-3-3"/><path d="m19 9 3 3-3 3"/><path d="M2 12h20"/><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/></svg></button>
+      </div>
+
+      <div class="toolbar-group" id="pattern-settings-group" style="display: none;">
+        <div class="pattern-size-group">
+          <span class="icon-label" title="图案大小"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M17 21h2a2 2 0 0 0 2-2"/><path d="M21 12v3"/><path d="m21 3-5 5"/><path d="M3 7V5a2 2 0 0 1 2-2"/><path d="m5 21 4.144-4.144a1.21 1.21 0 0 1 1.712 0L13 19"/><path d="M9 3h3"/><rect x="3" y="11" width="10" height="10" rx="1"/></svg><span id="pattern-size-value">100</span>%</span>
+          <input type="range" id="pattern-size" min="10" max="300" value="100" step="5" />
+        </div>
+        <div class="pattern-opacity-group">
+          <span class="icon-label" title="图案透明度"><svg id="opacity-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect width="18" height="18" x="3" y="3" rx="4"/></svg><span id="pattern-opacity-value">100</span>%</span>
+          <input type="range" id="pattern-opacity" min="5" max="100" value="100" step="5" />
+        </div>
+        <div class="pattern-angle-group">
+          <span class="icon-label" title="单个图案角度"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span class="pattern-angle-value" id="pattern-angle-value">0</span>°</span>
+        </div>
+        <div class="pattern-angle-group">
+          <span class="icon-label" title="整体图案角度"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V7a2 2 0 0 0-2-2h-6"/><path d="m15 2-3 3 3 3"/><path d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span class="pattern-angle-value" id="overall-angle-value">0</span>°</span>
+        </div>
+        <button class="btn action-btn" id="btn-reset-pattern" title="重置图案属性"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H3"/><path d="M7 12H3"/><path d="M7 19H3"/><path d="M12 18a5 5 0 0 0 9-3 4.5 4.5 0 0 0-4.5-4.5c-1.33 0-2.54.54-3.41 1.41L11 14"/><path d="M11 10v4h4"/></svg></button>
+      </div>
+
+      <div class="toolbar-group">
+        <button class="btn action-btn" id="btn-undo" disabled title="撤销 (Ctrl+Z)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
+        <button class="btn action-btn" id="btn-redo" disabled title="重做 (Ctrl+Shift+Z)"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg></button>
+        <button class="btn action-btn" id="btn-clear" disabled title="清除当前图层"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        <button class="btn export-btn" id="btn-export-layers" disabled title="仅导出所有图层"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12h11"/><path d="m17 16 4-4-4-4"/><path d="M21 6.344V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1.344"/></svg></button>
+        <button class="btn export-btn" id="btn-export" disabled title="导出"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg></button>
+      </div>
+    </div>
+
+    <div id="status-bar">请上传底图和预设图案</div>
+  </div>
+
+  <div id="workspace">
+    <canvas id="main-canvas"></canvas>
+    <div class="brush-cursor" id="brush-cursor"></div>
+    <div id="drop-overlay" class="drop-overlay hidden">
+      <div class="drop-zone" id="drop-zone-base" data-role="base">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/></svg>
+        <span>作为底图</span>
+      </div>
+      <div class="drop-zone" id="drop-zone-pattern" data-role="pattern">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1" fill="currentColor"/><rect x="8" y="2" width="14" height="14" rx="2"/></svg>
+        <span>作为图案</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layers Panel -->
+  <div id="layers-panel">
+    <div class="layers-panel-header">
+      <span>图层</span>
+      <button class="btn layers-add-btn" id="btn-add-layer" title="添加图层">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      </button>
+    </div>
+    <div class="layers-panel-list" id="layers-list"></div>
+  </div>
+
+  <!-- Text Pattern Modal -->
+  <div class="modal-overlay" id="text-pattern-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>文字图案编辑</span>
+        <button class="modal-close-btn" id="text-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-preview">
+          <canvas id="text-preview-canvas" width="256" height="256"></canvas>
+        </div>
+        <div class="modal-controls">
+          <textarea id="text-pattern-input" rows="3" placeholder="输入文字..."></textarea>
+          <div class="modal-control-row">
+            <label class="modal-label">字体</label>
+            <select id="text-font-select">
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Georgia, serif">Georgia</option>
+              <option value="'Times New Roman', serif">Times New Roman</option>
+              <option value="'Courier New', monospace">Courier New</option>
+              <option value="Verdana, sans-serif">Verdana</option>
+              <option value="SimSun, serif">宋体</option>
+              <option value="SimHei, sans-serif">黑体</option>
+              <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+              <option value="KaiTi, serif">楷体</option>
+            </select>
+          </div>
+          <div class="modal-control-row">
+            <div class="toggle-group">
+              <button class="btn toggle-btn" id="text-bold-btn" title="粗体"><strong>B</strong></button>
+              <button class="btn toggle-btn" id="text-italic-btn" title="斜体"><em>I</em></button>
+            </div>
+            <label class="color-picker-label">
+              颜色
+              <input type="color" id="text-color-picker" value="#000000" />
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="text-modal-cancel">取消</button>
+        <button class="btn btn-primary" id="text-modal-confirm">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blur Pattern Modal -->
+  <div class="modal-overlay" id="blur-pattern-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>模糊底图</span>
+        <button class="modal-close-btn" id="blur-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-preview">
+          <canvas id="blur-preview-canvas" width="256" height="256"></canvas>
+        </div>
+        <div class="modal-controls">
+          <div class="modal-control-row">
+            <label class="modal-label">模糊强度</label>
+            <input type="range" id="blur-intensity" min="1" max="40" value="10" />
+            <span class="blur-intensity-value" id="blur-intensity-value">10</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="blur-modal-cancel">取消</button>
+        <button class="btn btn-primary" id="blur-modal-confirm">确认</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="brush-size-dropdown" id="brush-size-dropdown">
+    <div class="brush-size-dropdown-row">
+      <span class="brush-size-circle" id="brush-size-circle"></span>
+      <span class="brush-size-dropdown-value" id="brush-size-value">15</span><span class="brush-size-dropdown-unit">%</span>
+      <input type="range" id="brush-size" min="5" max="50" value="15" />
+    </div>
+  </div>
+
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
