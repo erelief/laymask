@@ -15,6 +15,9 @@ desktop.ini
 *.swp
 *.swo
 
+# Claude Code
+.claude/
+
 # Environment
 .env
 .env.*
