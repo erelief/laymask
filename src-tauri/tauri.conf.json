@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "层层加码",
+  "productName": "Laymask",
   "version": "../package.json",
   "identifier": "com.laymask",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Laymask",
+        "title": "层层加码",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
