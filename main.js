@@ -1458,6 +1458,28 @@ blurModalConfirm.addEventListener('click', () => {
   img.src = dataUrl;
 });
 
+// --- Info Modal ---
+const btnInfo = document.getElementById('btn-info');
+const infoModal = document.getElementById('info-modal');
+const infoModalClose = document.getElementById('info-modal-close');
+const infoVersionNumber = document.getElementById('info-version-number');
+
+infoVersionNumber.textContent = __APP_VERSION__;
+
+function openInfoModal() {
+  infoModal.classList.add('modal-open');
+}
+
+function closeInfoModal() {
+  infoModal.classList.remove('modal-open');
+}
+
+btnInfo.addEventListener('click', openInfoModal);
+infoModalClose.addEventListener('click', closeInfoModal);
+infoModal.addEventListener('click', (e) => {
+  if (e.target === infoModal) closeInfoModal();
+});
+
 // --- Init pattern history ---
 loadPatternHistory();
 renderPatternDropdown();

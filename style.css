@@ -148,6 +148,15 @@ body {
   margin-left: auto;
 }
 
+/* --- Info Button --- */
+#btn-info {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+}
+
 .export-btn:hover:not(:disabled) {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
@@ -1029,4 +1038,79 @@ body {
 .layer-controls button svg {
   width: 12px;
   height: 12px;
+}
+
+/* ===== Info Modal ===== */
+
+.info-card {
+  width: 340px;
+}
+
+.info-body {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 16px 20px;
+}
+
+.info-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.info-app-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.info-app-name-en {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.info-version {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-left: auto;
+}
+
+.info-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border-color);
+  margin: 12px 0;
+}
+
+.info-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.info-section + .info-section {
+  margin-top: 8px;
+}
+
+.info-label {
+  color: var(--text-secondary);
+}
+
+.info-value {
+  color: var(--text-primary);
+}
+
+.info-value-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.info-value-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
 }
