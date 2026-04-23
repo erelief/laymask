@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use arboard::Image as ArboardImage;
 use base64::Engine;
 use tauri::Manager;
 
@@ -35,6 +36,32 @@ fn read_file_as_data_url(path: String) -> Result<String, String> {
 
     let encoded = base64::engine::general_purpose::STANDARD.encode(&data);
     Ok(format!("data:{};base64,{}", mime, encoded))
+}
+
+#[tauri::command]
+fn write_image_to_clipboard(data_url: String) -> Result<(), String> {
+    let (_, base64_data) = data_url
+        .split_once(',')
+        .ok_or_else(|| "Invalid data URL".to_string())?;
+
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(base64_data)
+        .map_err(|e| format!("Base64 decode error: {}", e))?;
+
+    // Parse width/height from PNG header
+    if bytes.len() < 24 {
+        return Err("Image data too short".to_string());
+    }
+    // PNG: width at offset 16 (4 bytes BE), height at offset 20 (4 bytes BE)
+    let w = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]) as usize;
+    let h = u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]) as usize;
+
+    let img = ArboardImage::from_rgba(w, h, bytes.into())
+        .map_err(|e| format!("Failed to create image: {}", e))?;
+
+    let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
+    clipboard.set_image(img).map_err(|e| format!("Failed to write to clipboard: {}", e))?;
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -75,7 +102,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_opened_files, read_file_as_data_url])
+        .invoke_handler(tauri::generate_handler![get_opened_files, read_file_as_data_url, write_image_to_clipboard])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

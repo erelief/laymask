@@ -1,4 +1,3 @@
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { CanvasEngine } from './canvas-engine.js';
 
 // --- DOM References ---
@@ -16,6 +15,12 @@ const btnRedo = document.getElementById('btn-redo');
 const btnClear = document.getElementById('btn-clear');
 const btnExport = document.getElementById('btn-export');
 const btnExportLayers = document.getElementById('btn-export-layers');
+const btnCopy = document.getElementById('btn-copy');
+const copyToast = document.getElementById('copy-toast');
+const pasteChoiceModal = document.getElementById('paste-choice-modal');
+const pasteModalClose = document.getElementById('paste-modal-close');
+const pasteAsBase = document.getElementById('paste-as-base');
+const pasteAsPattern = document.getElementById('paste-as-pattern');
 const patternPreviewPopup = document.getElementById('pattern-preview-popup');
 const patternPreviewImg = document.getElementById('pattern-preview-img');
 const dropOverlay = document.getElementById('drop-overlay');
@@ -398,6 +403,11 @@ document.getElementById('btn-select-all').addEventListener('click', () => {
 // --- Keyboard shortcuts for tool switching ---
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+    e.preventDefault();
+    copyToClipboard();
+    return;
+  }
   if (e.ctrlKey || e.metaKey) return;
 
   const toolMap = { r: 'rect', e: 'ellipse', b: 'brush', x: 'eraser', v: 'move-pattern' };
@@ -704,6 +714,7 @@ canvas.addEventListener('mask-changed', (e) => {
   btnClear.disabled = !hasMask;
   btnExport.disabled = !hasMask;
   btnExportLayers.disabled = !hasMask;
+  btnCopy.disabled = !hasMask;
   const moveBtn = toolGroup.querySelector('[data-tool="move-pattern"]');
   if (moveBtn) moveBtn.disabled = !hasMask || isBlurPattern;
   const eraserBtn = toolGroup.querySelector('[data-tool="eraser"]');
@@ -1061,6 +1072,7 @@ function updateReadyState() {
   btnClear.disabled = !ready || !engine.hasMask;
   btnExport.disabled = !ready || !engine.hasMask;
   btnExportLayers.disabled = !ready || !engine.hasMask;
+  btnCopy.disabled = !ready || !engine.hasMask;
   patternSettingsGroup.style.display = patternLoaded ? 'flex' : 'none';
   patternSettingsGroup.classList.toggle('blur-mode', patternLoaded && isBlurPattern);
 
@@ -1469,7 +1481,7 @@ infoVersionNumber.textContent = __APP_VERSION__;
 
 const infoAppIcon = document.getElementById('info-app-icon');
 if (__APP_ICON__) {
-  infoAppIcon.src = convertFileSrc(__APP_ICON__);
+  infoAppIcon.src = __APP_ICON__;
   infoAppIcon.alt = 'Laymask';
 }
 
@@ -1652,3 +1664,123 @@ async function initTauriDragDrop() {
 }
 
 initTauriDragDrop();
+
+// --- Clipboard Paste (Ctrl+V) ---
+let pendingPasteBlob = null;
+
+function openPasteChoiceModal(blob) {
+  pendingPasteBlob = blob;
+  pasteChoiceModal.classList.add('modal-open');
+}
+
+function closePasteChoiceModal() {
+  pasteChoiceModal.classList.remove('modal-open');
+  pendingPasteBlob = null;
+}
+
+async function handlePastedImage(blob, role) {
+  const img = await loadImageFromFile(blob);
+  const dataUrl = img.src;
+
+  if (role === 'base') {
+    clearBlurPatternIfNeeded();
+    engine.setBaseImage(img);
+    baseLoaded = true;
+    baseFileName = 'pasted_image';
+    brushSizeInput.value = 15;
+    brushSizeValue.textContent = '15';
+    engine.setBrushSize(15);
+    updateBrushSizeCircle(15);
+    statusBar.textContent = `底图已加载: ${img.naturalWidth}×${img.naturalHeight}`;
+    updateReadyState();
+  } else {
+    isBlurPattern = false;
+    engine.setPatternImage(img);
+    if (engine.activeLayerIndex >= 0) {
+      engine.layers[engine.activeLayerIndex].isBlur = false;
+    }
+    patternLoaded = true;
+    patternPreviewPopup.classList.remove('hidden');
+    patternPreviewImg.src = dataUrl;
+    addToPatternHistory(dataUrl, 'pasted_pattern');
+    const resizedDataUrl = await resizeImageForStorage(dataUrl, MAX_STORAGE_IMAGE_SIZE);
+    if (patternHistory[0]) patternHistory[0].thumbUrl = resizedDataUrl;
+    savePatternHistory();
+    updateReadyState();
+  }
+}
+
+document.addEventListener('paste', async (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  const blobs = [];
+  for (const item of items) {
+    if (item.type.startsWith('image/') && item.getAsFile()) {
+      blobs.push(item.getAsFile());
+    }
+  }
+  if (blobs.length === 0) return;
+  e.preventDefault();
+  openPasteChoiceModal(blobs[0]);
+});
+
+pasteModalClose.addEventListener('click', closePasteChoiceModal);
+pasteChoiceModal.addEventListener('click', (e) => {
+  if (e.target === pasteChoiceModal) closePasteChoiceModal();
+});
+
+pasteAsBase.addEventListener('click', async () => {
+  if (!pendingPasteBlob) return;
+  const blob = pendingPasteBlob;
+  closePasteChoiceModal();
+  try {
+    await handlePastedImage(blob, 'base');
+  } catch {
+    statusBar.textContent = '粘贴底图失败';
+  }
+});
+
+pasteAsPattern.addEventListener('click', async () => {
+  if (!pendingPasteBlob) return;
+  const blob = pendingPasteBlob;
+  closePasteChoiceModal();
+  try {
+    await handlePastedImage(blob, 'pattern');
+  } catch {
+    statusBar.textContent = '粘贴图案失败';
+  }
+});
+
+// --- Clipboard Copy (Ctrl+C) ---
+function showCopyToast() {
+  copyToast.classList.add('visible');
+  clearTimeout(copyToast._timer);
+  copyToast._timer = setTimeout(() => copyToast.classList.remove('visible'), 2500);
+}
+
+async function copyToClipboard() {
+  if (!engine.hasMask) return;
+  const dataURL = engine.getDataURL();
+  try {
+    const res = await fetch(dataURL);
+    const blob = await res.blob();
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+    showCopyToast();
+  } catch {
+    try {
+      if (window.__TAURI__) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        await invoke('write_image_to_clipboard', { dataUrl: dataURL });
+        showCopyToast();
+        return;
+      }
+    } catch {
+      console.error('Copy failed');
+      statusBar.textContent = '复制失败';
+    }
+  }
+}
+
+btnCopy.addEventListener('click', () => {
+  copyToClipboard();
+});

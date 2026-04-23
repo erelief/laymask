@@ -4,7 +4,7 @@ import pkg from './package.json';
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
-    __APP_ICON__: JSON.stringify('src-tauri/icons/icon.png'),
+    __APP_ICON__: JSON.stringify('/icon.png'),
   },
   base: './',
   server: {
