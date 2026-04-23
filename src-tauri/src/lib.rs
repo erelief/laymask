@@ -1,5 +1,4 @@
 use std::sync::{Arc, Mutex};
-use arboard::Image as ArboardImage;
 use base64::Engine;
 use tauri::Manager;
 
@@ -56,8 +55,7 @@ fn write_image_to_clipboard(data_url: String) -> Result<(), String> {
     let w = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]) as usize;
     let h = u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]) as usize;
 
-    let img = ArboardImage::from_rgba(w, h, bytes.into())
-        .map_err(|e| format!("Failed to create image: {}", e))?;
+    let img = arboard::ImageData { width: w, height: h, bytes: bytes.as_slice().into() };
 
     let mut clipboard = arboard::Clipboard::new().map_err(|e| format!("Clipboard error: {}", e))?;
     clipboard.set_image(img).map_err(|e| format!("Failed to write to clipboard: {}", e))?;
