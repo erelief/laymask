@@ -238,6 +238,52 @@
     </div>
   </div>
 
+  <!-- Save Modal -->
+  <div class="modal-overlay" id="save-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <span>保存图片</span>
+        <button class="modal-close-btn" id="save-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-preview">
+          <canvas id="save-preview-canvas"></canvas>
+        </div>
+        <div class="modal-controls">
+          <div class="modal-control-row">
+            <label class="modal-label">格式</label>
+            <select id="save-format">
+              <option value="png">PNG (无损)</option>
+              <option value="jpg">JPG (有损)</option>
+            </select>
+          </div>
+          <div class="modal-control-row" id="quality-row">
+            <label class="modal-label">质量</label>
+            <input type="range" id="save-quality" min="10" max="100" value="90" step="5" />
+            <span id="save-quality-value">90</span>%
+          </div>
+          <div class="modal-control-row">
+            <label class="modal-label">分辨率</label>
+            <input type="range" id="save-resolution" min="10" max="300" value="100" step="1" />
+            <span id="save-resolution-value">100</span>%
+          </div>
+          <div class="modal-control-row">
+            <span class="modal-label">尺寸</span>
+            <span id="save-size-info">-</span>
+          </div>
+          <div class="modal-control-row">
+            <span class="modal-label">预估大小</span>
+            <span id="save-file-size">-</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="save-modal-cancel">取消</button>
+        <button class="btn btn-primary" id="save-modal-confirm">保存</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="/main.js"></script>
 </body>
 </html>

@@ -672,13 +672,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   overflow: hidden;
-  background-image:
-    linear-gradient(45deg, #333 25%, transparent 25%),
-    linear-gradient(-45deg, #333 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #333 75%),
-    linear-gradient(-45deg, transparent 75%, #333 75%);
-  background-size: 12px 12px;
-  background-position: 0 0, 0 6px, 6px -6px, -6px 0px;
+  background: var(--bg-primary);
 }
 
 .modal-preview canvas {
@@ -1191,4 +1185,91 @@ body {
 .paste-choice-btn span {
   font-size: 14px;
   font-weight: 500;
+}
+
+/* ===== Save Modal ===== */
+.modal-control-row select {
+  flex: 1;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  padding: 4px 8px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+.modal-control-row select:focus {
+  border-color: var(--accent);
+}
+
+.modal-control-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border-color);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.modal-control-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.modal-control-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+
+#save-quality-value,
+#save-resolution-value {
+  min-width: 36px;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  cursor: text;
+  color: var(--text-primary);
+}
+
+#save-size-info,
+#save-file-size {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* Save progress state */
+.btn-saving {
+  position: relative;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.btn-saving::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@keyframes btn-spin {
+  to { transform: translateY(-50%) rotate(360deg); }
 }

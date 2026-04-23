@@ -16,6 +16,20 @@ const btnClear = document.getElementById('btn-clear');
 const btnExport = document.getElementById('btn-export');
 const btnExportLayers = document.getElementById('btn-export-layers');
 const btnCopy = document.getElementById('btn-copy');
+
+// --- Save Modal ---
+const saveModal = document.getElementById('save-modal');
+const saveFormatSelect = document.getElementById('save-format');
+const saveQualitySlider = document.getElementById('save-quality');
+const saveQualityValue = document.getElementById('save-quality-value');
+const saveResolutionSlider = document.getElementById('save-resolution');
+const saveResolutionValue = document.getElementById('save-resolution-value');
+const saveSizeInfo = document.getElementById('save-size-info');
+const saveFileSizeInfo = document.getElementById('save-file-size');
+const qualityRow = document.getElementById('quality-row');
+const savePreviewCanvas = document.getElementById('save-preview-canvas');
+const saveConfirmBtn = document.getElementById('save-modal-confirm');
+let saveMode = 'full'; // 'full' or 'layers'
 const copyToast = document.getElementById('copy-toast');
 const pasteChoiceModal = document.getElementById('paste-choice-modal');
 const pasteModalClose = document.getElementById('paste-modal-close');
@@ -684,23 +698,8 @@ btnClear.addEventListener('click', () => {
   statusBar.textContent = '已清除当前图层选区';
 });
 
-btnExport.addEventListener('click', async () => {
-  try {
-    await exportImage();
-  } catch (err) {
-    console.error('Export failed:', err);
-    statusBar.textContent = '导出失败: ' + err.message;
-  }
-});
-
-btnExportLayers.addEventListener('click', async () => {
-  try {
-    await exportLayersOnly();
-  } catch (err) {
-    console.error('Export layers failed:', err);
-    statusBar.textContent = '导出图层失败: ' + err.message;
-  }
-});
+btnExport.addEventListener('click', () => openSaveModal('full'));
+btnExportLayers.addEventListener('click', () => openSaveModal('layers'));
 
 // --- Canvas Events ---
 canvas.addEventListener('mask-changed', (e) => {
@@ -1094,126 +1093,229 @@ function updateReadyState() {
 }
 
 // --- Export ---
-async function exportImage() {
-  const dataURL = engine.getDataURL();
 
-  // Try Tauri native save dialog
-  if (window.__TAURI__) {
-    const { save } = await import('@tauri-apps/plugin-dialog');
-    const { writeBinaryFile } = await import('@tauri-apps/plugin-fs');
-
-    const exportName = baseFileName ? `masked_${baseFileName}.png` : 'masked_result.png';
-    const filePath = await save({
-      defaultPath: exportName,
-      filters: [{ name: 'PNG Image', extensions: ['png'] }],
-    });
-
-    if (!filePath) return; // User cancelled
-
-    // Convert base64 dataURL to Uint8Array
-    const base64 = dataURL.split(',')[1];
-    const binaryStr = atob(base64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
-    }
-
-    await writeBinaryFile(filePath, bytes);
-    statusBar.textContent = `已保存: ${filePath}`;
-    return;
-  }
-
-  // Web: try File System Access API (native save dialog)
-  if ('showSaveFilePicker' in window) {
-    try {
-      const exportName = baseFileName ? `masked_${baseFileName}.png` : 'masked_result.png';
-      const handle = await window.showSaveFilePicker({
-        suggestedName: exportName,
-        types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] } }],
-      });
-      const base64 = dataURL.split(',')[1];
-      const binaryStr = atob(base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
-      const writable = await handle.createWritable();
-      await writable.write(bytes);
-      await writable.close();
-      statusBar.textContent = `已保存: ${handle.name}`;
-      return;
-    } catch (e) {
-      if (e.name === 'AbortError') return; // User cancelled
-      throw e;
-    }
-  }
-
-  // Fallback for unsupported browsers (Firefox/Safari)
-  const link = document.createElement('a');
-  link.download = baseFileName ? `masked_${baseFileName}.png` : 'masked_result.png';
-  link.href = dataURL;
-  link.click();
-  statusBar.textContent = '图像已导出';
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
-// --- Export Layers Only ---
-async function exportLayersOnly() {
+/** Generate export dataURL at actual resolution (for final save) */
+function exportImageWithSettings(format, quality, resolutionScale) {
+  const srcCanvas = engine.canvas;
+  const w = Math.round(srcCanvas.width * resolutionScale);
+  const h = Math.round(srcCanvas.height * resolutionScale);
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = w;
+  exportCanvas.height = h;
+  const ctx = exportCanvas.getContext('2d');
+  ctx.drawImage(srcCanvas, 0, 0, w, h);
+  if (format === 'png') return exportCanvas.toDataURL('image/png');
+  return exportCanvas.toDataURL('image/jpeg', quality / 100);
+}
+
+/** Generate layers-only export dataURL at actual resolution (for final save) */
+function exportLayersWithSettings(format, quality, resolutionScale) {
   const dataURL = engine.getLayersDataURL();
+  const img = new Image();
+  img.src = dataURL;
+  const w = Math.round(engine.canvas.width * resolutionScale);
+  const h = Math.round(engine.canvas.height * resolutionScale);
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = w;
+  exportCanvas.height = h;
+  const ctx = exportCanvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+  if (format === 'png') return exportCanvas.toDataURL('image/png');
+  return exportCanvas.toDataURL('image/jpeg', quality / 100);
+}
 
-  if (window.__TAURI__) {
-    const { save } = await import('@tauri-apps/plugin-dialog');
-    const { writeBinaryFile } = await import('@tauri-apps/plugin-fs');
+/** Generate a small preview dataURL (max 320px) — fast for slider dragging */
+function generatePreviewDataURL(format, quality) {
+  const srcCanvas = engine.canvas;
+  const MAX_PREVIEW = 320;
+  const scale = Math.min(MAX_PREVIEW / srcCanvas.width, MAX_PREVIEW / srcCanvas.height, 1);
+  const w = Math.round(srcCanvas.width * scale);
+  const h = Math.round(srcCanvas.height * scale);
+  const previewCanvas = document.createElement('canvas');
+  previewCanvas.width = w;
+  previewCanvas.height = h;
+  const ctx = previewCanvas.getContext('2d');
+  ctx.drawImage(srcCanvas, 0, 0, w, h);
+  if (format === 'png') return previewCanvas.toDataURL('image/png');
+  return previewCanvas.toDataURL('image/jpeg', quality / 100);
+}
 
-    const exportName = baseFileName ? `layers_${baseFileName}.png` : 'layers_only.png';
-    const filePath = await save({
-      defaultPath: exportName,
-      filters: [{ name: 'PNG Image', extensions: ['png'] }],
-    });
+function openSaveModal(mode = 'full') {
+  if (!engine.hasMask) return;
+  saveMode = mode;
+  saveModal.classList.add('modal-open');
+  updateSavePreview();
+}
 
-    if (!filePath) return;
+function closeSaveModal() {
+  saveModal.classList.remove('modal-open');
+}
 
-    const base64 = dataURL.split(',')[1];
-    const binaryStr = atob(base64);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
+function updateSavePreview() {
+  if (!engine.hasMask) return;
+  const format = saveFormatSelect.value;
+  const quality = parseInt(saveQualitySlider.value, 10);
+  const resolution = parseFloat(saveResolutionSlider.value) / 100;
+
+  qualityRow.style.display = format === 'jpg' ? '' : 'none';
+
+  const baseW = engine.canvas.width;
+  const baseH = engine.canvas.height;
+  const outW = Math.round(baseW * resolution);
+  const outH = Math.round(baseH * resolution);
+  saveSizeInfo.textContent = `${outW} × ${outH}`;
+
+  // Use small preview (max 320px) for fast slider response
+  try {
+    const du = generatePreviewDataURL(format, quality);
+
+    // Estimate final file size by scaling preview data size to actual pixel ratio
+    const previewPixels = du.split(',')[1]?.length || 0;
+    const totalPixels = outW * outH;
+    const srcPixels = baseW * baseH;
+    const ratio = totalPixels / Math.max(srcPixels, 1);
+    saveFileSizeInfo.textContent = formatFileSize(Math.round(previewPixels * 0.75 * ratio));
+
+    const pi = new Image();
+    pi.onload = () => {
+      savePreviewCanvas.width = 160;
+      savePreviewCanvas.height = 160;
+      const c = savePreviewCanvas.getContext('2d');
+      const s = Math.min(160 / pi.naturalWidth, 160 / pi.naturalHeight);
+      c.drawImage(pi, (160 - s * pi.naturalWidth) / 2, (160 - s * pi.naturalHeight) / 2,
+                   s * pi.naturalWidth, s * pi.naturalHeight);
+    };
+    pi.src = du;
+  } catch {
+    saveFileSizeInfo.textContent = '-';
+  }
+}
+
+// Save modal events
+document.getElementById('save-modal-close').addEventListener('click', closeSaveModal);
+document.getElementById('save-modal-cancel').addEventListener('click', closeSaveModal);
+saveModal.addEventListener('click', (e) => { if (e.target === saveModal) closeSaveModal(); });
+saveFormatSelect.addEventListener('change', updateSavePreview);
+saveQualitySlider.addEventListener('input', () => {
+  saveQualityValue.textContent = saveQualitySlider.value;
+  updateSavePreview();
+});
+saveResolutionSlider.addEventListener('input', () => {
+  saveResolutionValue.textContent = saveResolutionSlider.value;
+  updateSavePreview();
+});
+
+// Resolution double-click inline edit
+enableInlineEdit(saveResolutionValue, {
+  min: 10, max: 300,
+  apply(val) { saveResolutionSlider.value = val; updateSavePreview(); },
+});
+
+// Save confirm handler with progress feedback
+saveConfirmBtn.addEventListener('click', async () => {
+  const fmt = saveFormatSelect.value;
+  const qual = parseInt(saveQualitySlider.value, 10);
+  const res = parseFloat(saveResolutionSlider.value) / 100;
+
+  const ext = fmt === 'png' ? 'png' : 'jpg';
+  const prefix = saveMode === 'layers' ? 'layers' : 'masked';
+  const defaultName = `${prefix}_${baseFileName || 'result'}.${ext}`;
+
+  saveConfirmBtn.classList.add('btn-saving');
+  saveConfirmBtn.disabled = true;
+
+  const yieldToUI = () => new Promise(r => setTimeout(r, 20));
+  const updateProgress = async (text, percent) => {
+    saveConfirmBtn.textContent = `${text} (${percent}%)`;
+    await yieldToUI();
+  };
+
+  try {
+    let fp = null;
+    if (window.__TAURI_INTERNALS__) {
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      fp = await save({ defaultPath: defaultName, filters: [{ name: '图片', extensions: [ext] }] });
+      if (!fp) throw new Error('USER_CANCELLED');
     }
 
-    await writeBinaryFile(filePath, bytes);
-    statusBar.textContent = `已保存: ${filePath}`;
-    return;
-  }
+    await updateProgress('正在合成图片', 10);
 
-  if ('showSaveFilePicker' in window) {
+    const du = saveMode === 'layers'
+      ? exportLayersWithSettings(fmt, qual, res)
+      : exportImageWithSettings(fmt, qual, res);
+
+    await updateProgress('正在转换数据格式', 45);
+
+    let bytes;
     try {
-      const exportName = baseFileName ? `layers_${baseFileName}.png` : 'layers_only.png';
-      const handle = await window.showSaveFilePicker({
-        suggestedName: exportName,
-        types: [{ description: 'PNG Image', accept: { 'image/png': ['.png'] } }],
-      });
-      const base64 = dataURL.split(',')[1];
+      const response = await fetch(du);
+      const arrayBuffer = await response.arrayBuffer();
+      bytes = new Uint8Array(arrayBuffer);
+      await updateProgress('数据转换完成', 80);
+    } catch (fetchErr) {
+      const base64 = du.split(',')[1];
       const binaryStr = atob(base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
+      const len = binaryStr.length;
+      bytes = new Uint8Array(len);
+      const chunkSize = 1024 * 512;
+      for (let i = 0; i < len; i += chunkSize) {
+        const end = Math.min(i + chunkSize, len);
+        for (let j = i; j < end; j++) bytes[j] = binaryStr.charCodeAt(j);
+        await updateProgress('正在转换数据格式', 45 + Math.floor((end / len) * 35));
       }
+    }
+
+    await updateProgress('正在写入文件', 90);
+
+    if (window.__TAURI_INTERNALS__) {
+      const { writeFile } = await import('@tauri-apps/plugin-fs');
+      await writeFile(fp, bytes);
+      statusBar.textContent = `已保存: ${fp}`;
+    } else if ('showSaveFilePicker' in window) {
+      const mimeType = fmt === 'png' ? 'image/png' : 'image/jpeg';
+      const handle = await window.showSaveFilePicker({
+        suggestedName: defaultName,
+        types: [{ description: '图片', accept: { [mimeType]: [`.${ext}`] } }],
+      });
       const writable = await handle.createWritable();
       await writable.write(bytes);
       await writable.close();
-      statusBar.textContent = `已保存: ${handle.name}`;
-      return;
-    } catch (e) {
-      if (e.name === 'AbortError') return;
-      throw e;
+      statusBar.textContent = '已保存';
+    } else {
+      const mimeType = fmt === 'png' ? 'image/png' : 'image/jpeg';
+      const blob = new Blob([bytes], { type: mimeType });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = defaultName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      statusBar.textContent = '图像已导出';
     }
-  }
 
-  const link = document.createElement('a');
-  link.download = baseFileName ? `layers_${baseFileName}.png` : 'layers_only.png';
-  link.href = dataURL;
-  link.click();
-  statusBar.textContent = '图层已导出';
-}
+    await updateProgress('保存成功', 100);
+    setTimeout(closeSaveModal, 300);
+  } catch (e) {
+    if (e.name === 'AbortError' || e.message === 'USER_CANCELLED') {
+      // User cancelled — silently restore
+    } else {
+      console.error('Save failed:', e);
+      saveConfirmBtn.textContent = '保存失败';
+      await yieldToUI();
+    }
+  } finally {
+    setTimeout(() => {
+      saveConfirmBtn.classList.remove('btn-saving');
+      saveConfirmBtn.disabled = false;
+      saveConfirmBtn.textContent = '保存';
+    }, 1000);
+  }
+});
 
 // --- Text Pattern Modal ---
 function openTextModal() {
@@ -1768,7 +1870,7 @@ async function copyToClipboard() {
     showCopyToast();
   } catch {
     try {
-      if (window.__TAURI__) {
+      if (window.__TAURI_INTERNALS__) {
         const { invoke } = await import('@tauri-apps/api/core');
         await invoke('write_image_to_clipboard', { dataUrl: dataURL });
         showCopyToast();
