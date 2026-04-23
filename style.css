@@ -1058,6 +1058,18 @@ body {
   gap: 8px;
 }
 
+.info-app-icon {
+  height: 1.2em;
+  width: auto;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.info-app-icon[src=""],
+.info-app-icon:not([src]) {
+  display: none;
+}
+
 .info-app-name {
   font-size: 16px;
   font-weight: 700;

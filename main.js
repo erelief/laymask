@@ -1,3 +1,4 @@
+import { convertFileSrc } from '@tauri-apps/api/core';
 import { CanvasEngine } from './canvas-engine.js';
 
 // --- DOM References ---
@@ -1465,6 +1466,12 @@ const infoModalClose = document.getElementById('info-modal-close');
 const infoVersionNumber = document.getElementById('info-version-number');
 
 infoVersionNumber.textContent = __APP_VERSION__;
+
+const infoAppIcon = document.getElementById('info-app-icon');
+if (__APP_ICON__) {
+  infoAppIcon.src = convertFileSrc(__APP_ICON__);
+  infoAppIcon.alt = 'Laymask';
+}
 
 function openInfoModal() {
   infoModal.classList.add('modal-open');

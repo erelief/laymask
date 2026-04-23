@@ -1,10 +1,14 @@
 # 层层加码 (Laymask)
 
+<p align="center">
+  <img src="images/logo.png" alt="MiniMix Logo" width="120">
+</p>
+
 一款轻量化的桌面图像蒙版合成工具——上传底图，绘制选区，将平铺图案填充到选区中，导出合成结果。
 
-![软件截图](images/screenshot.png "软件截图")
-
 ## 功能
+
+![软件截图](images/screenshot.png "软件截图")
 
 - **轻量化**  — 功能单一、专为“打码”而生，省去启动传统图像编辑软件
 - **多种选区工具** — 矩形、椭圆、画笔、橡皮擦
