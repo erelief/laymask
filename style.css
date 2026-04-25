@@ -1221,6 +1221,45 @@ input[type="range"]::-moz-range-thumb {
   text-decoration: underline;
 }
 
+/* ===== ABOUT DEPS (致谢) ===== */
+.about-deps-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.about-dep-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+}
+
+.about-dep-item + .about-dep-item {
+  margin-top: 6px;
+}
+
+.about-dep-name {
+  color: var(--text-secondary);
+}
+
+.about-dep-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s;
+  font-weight: 500;
+}
+
+.about-dep-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
 /* ===== COPY TOAST ===== */
 
 .copy-toast {

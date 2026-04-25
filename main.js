@@ -1601,6 +1601,54 @@ infoModal.addEventListener('click', (e) => {
   if (e.target === infoModal) closeInfoModal();
 });
 
+// 外部链接拦截：通过 shell 打开系统浏览器
+function setupShellLinks(container) {
+  if (typeof window.__TAURI_INTERNALS__ !== 'undefined') {
+    import('@tauri-apps/plugin-shell').then(({ open }) => {
+      container.querySelectorAll('a[href^="http"]').forEach(a => {
+        a.addEventListener('click', (e) => { e.preventDefault(); open(a.href); });
+      });
+    });
+  }
+}
+setupShellLinks(infoModal);
+
+// 动态渲染第三方依赖（致谢）
+function renderDeps(deps) {
+  const container = document.getElementById('about-deps');
+  const divider = document.getElementById('deps-divider');
+  if (!deps || deps.length === 0) return;
+
+  divider.style.display = '';
+  const title = document.createElement('div');
+  title.className = 'about-deps-title';
+  title.textContent = '致谢';
+  container.appendChild(title);
+
+  deps.forEach(dep => {
+    const item = document.createElement('div');
+    item.className = 'about-dep-item';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'about-dep-name';
+    nameEl.textContent = dep.name;
+
+    let linkText = dep.version ? `v${dep.version}` : dep.name;
+    const linkEl = document.createElement('a');
+    linkEl.className = 'about-dep-link';
+    linkEl.href = dep.url;
+    linkEl.target = '_blank';
+    linkEl.rel = 'noopener noreferrer';
+    linkEl.textContent = linkText;
+
+    item.appendChild(nameEl);
+    item.appendChild(linkEl);
+    container.appendChild(item);
+  });
+
+  setupShellLinks(container);
+}
+renderDeps(__ABOUT_DEPS__);
+
 // --- Init pattern history ---
 loadPatternHistory();
 renderPatternDropdown();

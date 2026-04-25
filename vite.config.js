@@ -5,6 +5,11 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_ICON__: JSON.stringify('/icon.png'),
+    __ABOUT_DEPS__: JSON.stringify([
+      { name: 'Lucide', url: 'https://lucide.dev' },
+      { name: 'Tauri', version: '2', url: 'https://tauri.app' },
+      { name: 'Vite', version: pkg.devDependencies?.vite ? pkg.devDependencies.vite.replace('^', '') : '', url: 'https://vitejs.dev' },
+    ]),
   },
   base: './',
   server: {

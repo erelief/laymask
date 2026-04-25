@@ -18,6 +18,7 @@
     {
       "identifier": "fs:allow-read-file",
       "allow": [{ "path": "**" }]
-    }
+    },
+    "shell:allow-open"
   ]
 }
