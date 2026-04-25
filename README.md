@@ -8,7 +8,9 @@
 
 ## 功能
 
-![软件截图](images/screenshot.png "软件截图")
+<p align="center">
+  <img src="images/screenshot.png" alt="Screenshot" width="800">
+</p>
 
 - **轻量化**  — 功能单一、专为“打码”而生，省去启动传统图像编辑软件
 - **多种选区工具** — 矩形、椭圆、画笔、橡皮擦
