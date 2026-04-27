@@ -898,10 +898,19 @@ input[type="range"]::-moz-range-thumb {
   gap: 8px;
 }
 
+.modal-footer .btn {
+  width: auto;
+  padding: 0 14px;
+  min-width: 60px;
+}
+
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  width: auto;
+  padding: 0 14px;
+  min-width: 60px;
 }
 
 .btn-primary:hover {
@@ -1377,6 +1386,7 @@ input[type="range"]::-moz-range-thumb {
   position: relative;
   pointer-events: none;
   opacity: 0.85;
+  padding-right: 36px;
 }
 
 .btn-saving::after {
