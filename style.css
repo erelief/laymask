@@ -1383,26 +1383,23 @@ input[type="range"]::-moz-range-thumb {
 
 /* Save progress state */
 .btn-saving {
-  position: relative;
   pointer-events: none;
   opacity: 0.85;
-  padding-right: 36px;
 }
 
 .btn-saving::after {
   content: '';
-  position: absolute;
+  display: inline-block;
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.25);
   border-top-color: #fff;
   border-radius: 50%;
   animation: btn-spin 0.6s linear infinite;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
+  margin-left: 8px;
+  flex-shrink: 0;
 }
 
 @keyframes btn-spin {
-  to { transform: translateY(-50%) rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
