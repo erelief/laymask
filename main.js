@@ -1175,12 +1175,29 @@ function updateSavePreview() {
   try {
     const du = generatePreviewDataURL(format, quality);
 
-    // Estimate final file size by scaling preview data size to actual pixel ratio
-    const previewPixels = du.split(',')[1]?.length || 0;
+    // Estimate final file size
+    const previewBinary = (du.split(',')[1]?.length || 0) * 0.75;
     const totalPixels = outW * outH;
-    const srcPixels = baseW * baseH;
-    const ratio = totalPixels / Math.max(srcPixels, 1);
-    saveFileSizeInfo.textContent = formatFileSize(Math.round(previewPixels * 0.75 * ratio));
+
+    const MAX_PREVIEW = 320;
+    const previewScale = Math.min(MAX_PREVIEW / baseW, MAX_PREVIEW / baseH, 1);
+    const previewW = Math.round(baseW * previewScale);
+    const previewH = Math.round(baseH * previewScale);
+    const previewPixelCount = previewW * previewH;
+
+    let estimatedBytes;
+    if (format === 'png') {
+      // PNG DEFLATE efficiency degrades as image size increases
+      const previewRaw = previewPixelCount * 4;
+      const previewRatio = previewBinary / previewRaw;
+      const scaleFactor = totalPixels / previewPixelCount;
+      const blend = Math.min(1, Math.log10(scaleFactor) / 3);
+      const effectiveRatio = previewRatio * (1 - blend) + 0.42 * blend;
+      estimatedBytes = Math.round(totalPixels * 4 * effectiveRatio);
+    } else {
+      estimatedBytes = Math.round(previewBinary * (totalPixels / previewPixelCount));
+    }
+    saveFileSizeInfo.textContent = formatFileSize(estimatedBytes);
 
     const pi = new Image();
     pi.onload = () => {
