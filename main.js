@@ -25,6 +25,8 @@ const saveQualityValue = document.getElementById('save-quality-value');
 const saveResolutionSlider = document.getElementById('save-resolution');
 const saveResolutionValue = document.getElementById('save-resolution-value');
 const saveSizeInfo = document.getElementById('save-size-info');
+const saveSizeW = document.getElementById('save-size-w');
+const saveSizeH = document.getElementById('save-size-h');
 const saveFileSizeInfo = document.getElementById('save-file-size');
 const qualityRow = document.getElementById('quality-row');
 const savePreviewCanvas = document.getElementById('save-preview-canvas');
@@ -325,15 +327,17 @@ function clearBlurPatternIfNeeded() {
 // --- Image Loading ---
 function loadImageFromFile(file) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = reader.result;
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(img);
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Failed to load image'));
+    };
+    img.src = objectUrl;
   });
 }
 
@@ -1167,9 +1171,12 @@ function updateSavePreview() {
 
   const baseW = engine.canvas.width;
   const baseH = engine.canvas.height;
+  saveSizeInfo._baseW = baseW;
+  saveSizeInfo._baseH = baseH;
   const outW = Math.round(baseW * resolution);
   const outH = Math.round(baseH * resolution);
-  saveSizeInfo.textContent = `${outW} × ${outH}`;
+  saveSizeW.textContent = outW;
+  saveSizeH.textContent = outH;
 
   // Use small preview (max 320px) for fast slider response
   try {
@@ -1233,6 +1240,32 @@ enableInlineEdit(saveResolutionValue, {
   min: 10, max: 300,
   apply(val) { saveResolutionSlider.value = val; updateSavePreview(); },
 });
+
+// Dimension double-click inline edit (width/height linked to resolution)
+function enableDimensionEdit(el, isWidth) {
+  enableInlineEdit(el, {
+    min: 1, max: 20000,
+    apply(val) {
+      const baseW = saveSizeInfo._baseW || 1;
+      const baseH = saveSizeInfo._baseH || 1;
+      const exactRes = isWidth ? val / baseW : val / baseH;
+      const clampedRes = Math.max(0.1, Math.min(2, exactRes));
+      const pct = Math.round(clampedRes * 100);
+      saveResolutionSlider.value = pct;
+      saveResolutionValue.textContent = pct;
+      updateSavePreview();
+      if (isWidth) {
+        saveSizeW.textContent = val;
+        saveSizeH.textContent = Math.round(baseH * clampedRes);
+      } else {
+        saveSizeH.textContent = val;
+        saveSizeW.textContent = Math.round(baseW * clampedRes);
+      }
+    },
+  });
+}
+enableDimensionEdit(saveSizeW, true);
+enableDimensionEdit(saveSizeH, false);
 
 // Save confirm handler with progress feedback
 saveConfirmBtn.addEventListener('click', async () => {
@@ -1681,6 +1714,7 @@ async function initOpenWithFile() {
   }
   try {
     const { invoke } = await import('@tauri-apps/api/core');
+    const { convertFileSrc } = await import('@tauri-apps/api/core');
     const files = await invoke('get_opened_files');
     console.log('[OpenWith] files:', files);
     statusBar.textContent = `检测到启动参数: ${JSON.stringify(files)}`;
@@ -1688,8 +1722,7 @@ async function initOpenWithFile() {
 
     const filePath = files[0];
     statusBar.textContent = `正在加载: ${filePath}`;
-    const dataUrl = await invoke('read_file_as_data_url', { path: filePath });
-    console.log('[OpenWith] dataUrl length:', dataUrl.length);
+    const src = convertFileSrc(filePath);
 
     const img = new Image();
     img.onload = () => {
@@ -1707,7 +1740,7 @@ async function initOpenWithFile() {
     img.onerror = () => {
       statusBar.textContent = '底图加载失败';
     };
-    img.src = dataUrl;
+    img.src = src;
   } catch (err) {
     console.warn('[OpenWith] Error:', err);
     statusBar.textContent = `加载失败: ${err}`;
@@ -1759,15 +1792,15 @@ function updateZoneHover(zone) {
 }
 
 async function handleDroppedFilePath(path, role) {
-  const { invoke } = await import('@tauri-apps/api/core');
-  const dataUrl = await invoke('read_file_as_data_url', { path });
+  const { convertFileSrc } = await import('@tauri-apps/api/core');
+  const src = convertFileSrc(path);
   const fileName = path.split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
 
   const img = new Image();
   await new Promise((resolve, reject) => {
     img.onload = resolve;
     img.onerror = reject;
-    img.src = dataUrl;
+    img.src = src;
   });
 
   if (role === 'base') {

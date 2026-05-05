@@ -15,29 +15,6 @@ fn get_opened_files(app: tauri::AppHandle) -> Vec<String> {
 }
 
 #[tauri::command]
-fn read_file_as_data_url(path: String) -> Result<String, String> {
-    let data = std::fs::read(&path).map_err(|e| format!("Failed to read file: {}", e))?;
-
-    let lower = path.to_lowercase();
-    let mime = if lower.ends_with(".png") {
-        "image/png"
-    } else if lower.ends_with(".jpg") || lower.ends_with(".jpeg") {
-        "image/jpeg"
-    } else if lower.ends_with(".bmp") {
-        "image/bmp"
-    } else if lower.ends_with(".gif") {
-        "image/gif"
-    } else if lower.ends_with(".webp") {
-        "image/webp"
-    } else {
-        "application/octet-stream"
-    };
-
-    let encoded = base64::engine::general_purpose::STANDARD.encode(&data);
-    Ok(format!("data:{};base64,{}", mime, encoded))
-}
-
-#[tauri::command]
 fn write_image_to_clipboard(data_url: String) -> Result<(), String> {
     let (_, base64_data) = data_url
         .split_once(',')
@@ -101,7 +78,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_opened_files, read_file_as_data_url, write_image_to_clipboard])
+        .invoke_handler(tauri::generate_handler![get_opened_files, write_image_to_clipboard])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
