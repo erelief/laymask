@@ -1714,7 +1714,7 @@ async function initOpenWithFile() {
   }
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const { convertFileSrc } = await import('@tauri-apps/api/core');
+    const { readFile } = await import('@tauri-apps/plugin-fs');
     const files = await invoke('get_opened_files');
     console.log('[OpenWith] files:', files);
     statusBar.textContent = `检测到启动参数: ${JSON.stringify(files)}`;
@@ -1722,10 +1722,12 @@ async function initOpenWithFile() {
 
     const filePath = files[0];
     statusBar.textContent = `正在加载: ${filePath}`;
-    const src = convertFileSrc(filePath);
+    const buf = await readFile(filePath);
+    const objectUrl = URL.createObjectURL(new File([buf], filePath.split(/[\\/]/).pop() || 'image.png', { type: 'image/*' }));
 
     const img = new Image();
     img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
       clearBlurPatternIfNeeded();
       engine.setBaseImage(img);
       baseLoaded = true;
@@ -1738,9 +1740,10 @@ async function initOpenWithFile() {
       updateReadyState();
     };
     img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
       statusBar.textContent = '底图加载失败';
     };
-    img.src = src;
+    img.src = objectUrl;
   } catch (err) {
     console.warn('[OpenWith] Error:', err);
     statusBar.textContent = `加载失败: ${err}`;
@@ -1792,15 +1795,16 @@ function updateZoneHover(zone) {
 }
 
 async function handleDroppedFilePath(path, role) {
-  const { convertFileSrc } = await import('@tauri-apps/api/core');
-  const src = convertFileSrc(path);
+  const { readFile } = await import('@tauri-apps/plugin-fs');
+  const buf = await readFile(path);
   const fileName = path.split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+  const objectUrl = URL.createObjectURL(new File([buf], path.split(/[\\/]/).pop() || 'image.png', { type: 'image/*' }));
 
   const img = new Image();
   await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = reject;
-    img.src = src;
+    img.onload = () => { URL.revokeObjectURL(objectUrl); resolve(); };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(); };
+    img.src = objectUrl;
   });
 
   if (role === 'base') {
