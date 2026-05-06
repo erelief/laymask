@@ -9,6 +9,7 @@ export default defineConfig({
       { name: 'Lucide', url: 'https://lucide.dev' },
       { name: 'Tauri', version: '2', url: 'https://tauri.app' },
       { name: 'Vite', version: pkg.devDependencies?.vite ? pkg.devDependencies.vite.replace('^', '') : '', url: 'https://vitejs.dev' },
+      { name: 'OxiPNG', version: '10', url: 'https://github.com/oxipng/oxipng' },
     ]),
   },
   base: './',

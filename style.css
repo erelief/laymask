@@ -1395,6 +1395,22 @@ input[type="range"]::-moz-range-thumb {
   font-weight: 500;
 }
 
+.save-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.save-checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 /* Save progress state */
 .btn-saving {
   pointer-events: none;

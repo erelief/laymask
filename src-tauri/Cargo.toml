@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.3.9"
+version = "0.3.10"
 description = "A Tauri App"
 authors = ["you"]
 license = ""
@@ -29,3 +29,4 @@ tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 arboard = "3"
+oxipng = "10"

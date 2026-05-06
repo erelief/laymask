@@ -29,6 +29,8 @@ const saveSizeW = document.getElementById('save-size-w');
 const saveSizeH = document.getElementById('save-size-h');
 const saveFileSizeInfo = document.getElementById('save-file-size');
 const qualityRow = document.getElementById('quality-row');
+const losslessCompressRow = document.getElementById('lossless-compress-row');
+const losslessCompressCheckbox = document.getElementById('save-lossless-compress');
 const savePreviewCanvas = document.getElementById('save-preview-canvas');
 const saveConfirmBtn = document.getElementById('save-modal-confirm');
 let saveMode = 'full'; // 'full' or 'layers'
@@ -1168,6 +1170,7 @@ function updateSavePreview() {
   const resolution = parseFloat(saveResolutionSlider.value) / 100;
 
   qualityRow.style.display = format === 'jpg' ? '' : 'none';
+  losslessCompressRow.style.display = format === 'png' ? '' : 'none';
 
   const baseW = engine.canvas.width;
   const baseH = engine.canvas.height;
@@ -1183,28 +1186,16 @@ function updateSavePreview() {
     const du = generatePreviewDataURL(format, quality);
 
     // Estimate final file size
-    const previewBinary = (du.split(',')[1]?.length || 0) * 0.75;
-    const totalPixels = outW * outH;
-
+    const previewBase64Len = (du.split(',')[1]?.length || 0) * 0.75;
     const MAX_PREVIEW = 320;
     const previewScale = Math.min(MAX_PREVIEW / baseW, MAX_PREVIEW / baseH, 1);
     const previewW = Math.round(baseW * previewScale);
     const previewH = Math.round(baseH * previewScale);
-    const previewPixelCount = previewW * previewH;
-
-    let estimatedBytes;
-    if (format === 'png') {
-      // PNG DEFLATE efficiency degrades as image size increases
-      const previewRaw = previewPixelCount * 4;
-      const previewRatio = previewBinary / previewRaw;
-      const scaleFactor = totalPixels / previewPixelCount;
-      const blend = Math.min(1, Math.log10(scaleFactor) / 3);
-      const effectiveRatio = previewRatio * (1 - blend) + 0.42 * blend;
-      estimatedBytes = Math.round(totalPixels * 4 * effectiveRatio);
-    } else {
-      estimatedBytes = Math.round(previewBinary * (totalPixels / previewPixelCount));
-    }
-    saveFileSizeInfo.textContent = formatFileSize(estimatedBytes);
+    const pixelRatio = (outW * outH) / Math.max(previewW * previewH, 1);
+    const rawSize = Math.round(previewBase64Len * pixelRatio);
+    const displaySize = (format === 'png' && losslessCompressCheckbox.checked)
+      ? formatFileSize(Math.round(rawSize * 0.75)) : formatFileSize(rawSize);
+    saveFileSizeInfo.textContent = displaySize;
 
     const pi = new Image();
     pi.onload = () => {
@@ -1226,6 +1217,7 @@ document.getElementById('save-modal-close').addEventListener('click', closeSaveM
 document.getElementById('save-modal-cancel').addEventListener('click', closeSaveModal);
 saveModal.addEventListener('click', (e) => { if (e.target === saveModal) closeSaveModal(); });
 saveFormatSelect.addEventListener('change', updateSavePreview);
+losslessCompressCheckbox.addEventListener('change', updateSavePreview);
 saveQualitySlider.addEventListener('input', () => {
   saveQualityValue.textContent = saveQualitySlider.value;
   updateSavePreview();
@@ -1324,9 +1316,17 @@ saveConfirmBtn.addEventListener('click', async () => {
     await updateProgress('正在写入文件', 90);
 
     if (window.__TAURI_INTERNALS__) {
-      const { writeFile } = await import('@tauri-apps/plugin-fs');
-      await writeFile(fp, bytes);
-      statusBar.textContent = `已保存: ${fp}`;
+      const useCompression = fmt === 'png' && losslessCompressCheckbox.checked;
+      if (useCompression) {
+        await updateProgress('正在压缩PNG', 90);
+        const { invoke } = await import('@tauri-apps/api/core');
+        const resultMsg = await invoke('compress_and_save_png', { data: Array.from(bytes), path: fp });
+        statusBar.textContent = resultMsg;
+      } else {
+        const { writeFile } = await import('@tauri-apps/plugin-fs');
+        await writeFile(fp, bytes);
+        statusBar.textContent = `已保存: ${fp}`;
+      }
     } else if ('showSaveFilePicker' in window) {
       const mimeType = fmt === 'png' ? 'image/png' : 'image/jpeg';
       const handle = await window.showSaveFilePicker({
