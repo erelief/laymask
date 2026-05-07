@@ -40,6 +40,10 @@ export class CanvasEngine {
     this.currentY = 0;
     this.brushPoints = [];
 
+    // Crop state
+    this.isCropActive = false;
+    this.cropRect = null;
+
     // Undo/Redo (global)
     this.undoStack = [];
     this.redoStack = [];
@@ -60,6 +64,7 @@ export class CanvasEngine {
     this._boundTouchEnd = this._onTouchEnd.bind(this);
     this._boundResize = this._resizeDisplay.bind(this);
     this._boundKeyDown = this._onKeyDown.bind(this);
+    this._boundDblClick = this._onDblClick.bind(this);
 
     this._attachEvents();
 
@@ -82,6 +87,7 @@ export class CanvasEngine {
 
     window.addEventListener('resize', this._boundResize);
     window.addEventListener('keydown', this._boundKeyDown);
+    this.canvas.addEventListener('dblclick', this._boundDblClick);
   }
 
   destroy() {
@@ -93,6 +99,7 @@ export class CanvasEngine {
     this.canvas.removeEventListener('touchend', this._boundTouchEnd);
     window.removeEventListener('resize', this._boundResize);
     window.removeEventListener('keydown', this._boundKeyDown);
+    this.canvas.removeEventListener('dblclick', this._boundDblClick);
     this.canvas.removeEventListener('mousemove', this._boundCursorMove);
     this.canvas.removeEventListener('mouseleave', this._boundCursorLeave);
   }
@@ -117,6 +124,9 @@ export class CanvasEngine {
   }
 
   setCurrentTool(tool) {
+    if (this.currentTool === 'crop' && tool !== 'crop' && this.isCropActive) {
+      this._cancelCrop();
+    }
     this.currentTool = tool;
   }
 
@@ -382,6 +392,17 @@ export class CanvasEngine {
         this.redoStack.push({ type: 'layer-deleted', layerIndex: entry.layerIndex });
         break;
       }
+      case 'crop': {
+        this.redoStack.push({
+          type: 'crop',
+          oldWidth: this.canvas.width,
+          oldHeight: this.canvas.height,
+          oldBaseImage: this._cloneBaseImage(),
+          layers: this.layers.map(l => this._snapshotLayer(l)),
+          activeLayerIndex: this.activeLayerIndex,
+        });
+        break;
+      }
     }
     if (this.redoStack.length > this.maxUndo) this.redoStack.shift();
   }
@@ -431,6 +452,17 @@ export class CanvasEngine {
       }
       case 'layer-deleted': {
         this.undoStack.push({ type: 'layer-deleted', layerIndex: entry.layerIndex, layerSnapshot: entry.layerSnapshot });
+        break;
+      }
+      case 'crop': {
+        this.undoStack.push({
+          type: 'crop',
+          oldWidth: this.canvas.width,
+          oldHeight: this.canvas.height,
+          oldBaseImage: this._cloneBaseImage(),
+          layers: this.layers.map(l => this._snapshotLayer(l)),
+          activeLayerIndex: this.activeLayerIndex,
+        });
         break;
       }
     }
@@ -496,6 +528,17 @@ export class CanvasEngine {
         this._loadActiveLayerState();
         break;
       }
+      case 'crop': {
+        this.baseImage = entry.oldBaseImage;
+        this.canvas.width = entry.oldWidth;
+        this.canvas.height = entry.oldHeight;
+        this.shortSide = Math.min(entry.oldWidth, entry.oldHeight);
+        this.isCropActive = false;
+        this.cropRect = null;
+        this._restoreLayersFromSnapshots(entry.layers, entry.activeLayerIndex);
+        this._resizeDisplay();
+        break;
+      }
     }
   }
 
@@ -554,6 +597,17 @@ export class CanvasEngine {
           this.activeLayerIndex = 0;
         }
         this._loadActiveLayerState();
+        break;
+      }
+      case 'crop': {
+        this.baseImage = entry.oldBaseImage;
+        this.canvas.width = entry.oldWidth;
+        this.canvas.height = entry.oldHeight;
+        this.shortSide = Math.min(entry.oldWidth, entry.oldHeight);
+        this.isCropActive = false;
+        this.cropRect = null;
+        this._restoreLayersFromSnapshots(entry.layers, entry.activeLayerIndex);
+        this._resizeDisplay();
         break;
       }
     }
@@ -767,12 +821,29 @@ export class CanvasEngine {
   // --- Mouse Handlers ---
 
   _onMouseDown(e) {
-    if (!this.ready) return;
+    if (!this.baseImage) return;
+    if (this.currentTool !== 'crop' && !this.ready) return;
     if (e.target.closest('#toolbar')) return;
     if (e.target.closest('.modal-overlay')) return;
     if (e.target.closest('.brush-size-dropdown')) return;
     if (e.target.closest('#layers-panel')) return;
     if (this.currentTool === 'move-pattern' && !this._hasMask) return;
+
+    // Crop tool: cancel active crop and start new drag
+    if (this.currentTool === 'crop') {
+      if (this.isCropActive) {
+        this._cancelCrop();
+      }
+      e.preventDefault();
+      this.isDrawing = true;
+      const { x, y } = this._getCanvasCoords(e);
+      this.startX = x;
+      this.startY = y;
+      this.currentX = x;
+      this.currentY = y;
+      return;
+    }
+
     e.preventDefault();
     this.isDrawing = true;
     const { x, y } = this._getCanvasCoords(e);
@@ -794,6 +865,21 @@ export class CanvasEngine {
     const { x, y } = this._getCanvasCoords(e);
     this.currentX = x;
     this.currentY = y;
+
+    if (this.currentTool === 'crop') {
+      const cx = Math.max(0, Math.min(this.currentX, this.canvas.width));
+      const cy = Math.max(0, Math.min(this.currentY, this.canvas.height));
+      const sx = Math.max(0, Math.min(this.startX, this.canvas.width));
+      const sy = Math.max(0, Math.min(this.startY, this.canvas.height));
+      this.cropRect = {
+        x: Math.min(sx, cx),
+        y: Math.min(sy, cy),
+        w: Math.abs(cx - sx),
+        h: Math.abs(cy - sy),
+      };
+      this._drawCropPreview();
+      return;
+    }
 
     if (this.currentTool === 'move-pattern') {
       const dx = this.currentX - this.startX;
@@ -824,6 +910,15 @@ export class CanvasEngine {
     this.currentX = x;
     this.currentY = y;
 
+    if (this.currentTool === 'crop') {
+      if (this.cropRect && this.cropRect.w >= 5 && this.cropRect.h >= 5) {
+        this.isCropActive = true;
+      } else {
+        this._cancelCrop();
+      }
+      return;
+    }
+
     if (this.currentTool === 'move-pattern') {
       return; // Offset already applied during mousemove
     }
@@ -844,6 +939,14 @@ export class CanvasEngine {
     this._composite();
     this._renderToMain();
     this._emitMaskChanged();
+  }
+
+  // --- Double-click ---
+
+  _onDblClick(e) {
+    if (this.currentTool === 'crop' && this.isCropActive) {
+      this._applyCrop();
+    }
   }
 
   // --- Touch Handlers ---
@@ -875,6 +978,18 @@ export class CanvasEngine {
   // --- Keyboard ---
 
   _onKeyDown(e) {
+    if (this.currentTool === 'crop' && this.isCropActive) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this._applyCrop();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        this._cancelCrop();
+        return;
+      }
+    }
     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
       this.undo();
@@ -893,6 +1008,10 @@ export class CanvasEngine {
   // --- Preview ---
 
   _drawPreview() {
+    if (this.currentTool === 'crop') {
+      this._drawCropPreview();
+      return;
+    }
     this._renderToMain();
 
     const ctx = this.ctx;
@@ -943,6 +1062,186 @@ export class CanvasEngine {
     }
 
     ctx.restore();
+  }
+
+  _drawCropPreview() {
+    if (!this.cropRect) return;
+    this._renderToMain();
+
+    const ctx = this.ctx;
+    const cw = this.canvas.width;
+    const ch = this.canvas.height;
+    const { x, y, w, h } = this.cropRect;
+
+    ctx.save();
+    // Darkened overlay outside crop area
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(0, 0, cw, y);           // top
+    ctx.fillRect(0, y + h, cw, ch - y - h); // bottom
+    ctx.fillRect(0, y, x, h);            // left
+    ctx.fillRect(x + w, y, cw - x - w, h); // right
+
+    // Crop border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 1.5 / this.scale;
+    ctx.setLineDash([]);
+    ctx.strokeRect(x, y, w, h);
+
+    // Rule of thirds
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.lineWidth = 0.5 / this.scale;
+    ctx.beginPath();
+    ctx.moveTo(x + w / 3, y); ctx.lineTo(x + w / 3, y + h);
+    ctx.moveTo(x + 2 * w / 3, y); ctx.lineTo(x + 2 * w / 3, y + h);
+    ctx.moveTo(x, y + h / 3); ctx.lineTo(x + w, y + h / 3);
+    ctx.moveTo(x, y + 2 * h / 3); ctx.lineTo(x + w, y + 2 * h / 3);
+    ctx.stroke();
+
+    // Corner handles
+    const handleLen = Math.min(16, w / 4, h / 4) / this.scale;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 2.5 / this.scale;
+    ctx.beginPath();
+    ctx.moveTo(x, y + handleLen); ctx.lineTo(x, y); ctx.lineTo(x + handleLen, y);
+    ctx.moveTo(x + w - handleLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + handleLen);
+    ctx.moveTo(x, y + h - handleLen); ctx.lineTo(x, y + h); ctx.lineTo(x + handleLen, y + h);
+    ctx.moveTo(x + w - handleLen, y + h); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w, y + h - handleLen);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // --- Crop Apply / Cancel ---
+
+  _applyCrop() {
+    if (!this.isCropActive || !this.cropRect) return;
+
+    let { x, y, w, h } = this.cropRect;
+    x = Math.max(0, Math.round(x));
+    y = Math.max(0, Math.round(y));
+    w = Math.min(this.canvas.width - x, Math.round(w));
+    h = Math.min(this.canvas.height - y, Math.round(h));
+    if (w < 2 || h < 2) { this._cancelCrop(); return; }
+
+    // Save full undo snapshot
+    const undoEntry = {
+      type: 'crop',
+      oldWidth: this.canvas.width,
+      oldHeight: this.canvas.height,
+      oldBaseImage: this._cloneBaseImage(),
+      layers: this.layers.map(layer => this._snapshotLayer(layer)),
+      activeLayerIndex: this.activeLayerIndex,
+    };
+    this.undoStack.push(undoEntry);
+    if (this.undoStack.length > this.maxUndo) this.undoStack.shift();
+    this.redoStack = [];
+
+    this._executeCrop(x, y, w, h);
+  }
+
+  _executeCrop(x, y, w, h) {
+    // Create cropped base image as canvas element
+    const croppedBase = document.createElement('canvas');
+    croppedBase.width = w;
+    croppedBase.height = h;
+    const cCtx = croppedBase.getContext('2d');
+    cCtx.drawImage(this.baseImage, x, y, w, h, 0, 0, w, h);
+    this.baseImage = croppedBase;
+
+    // Resize main canvas
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.shortSide = Math.min(w, h);
+
+    // Recreate each layer with cropped data
+    const newLayers = [];
+    for (let i = 0; i < this.layers.length; i++) {
+      const old = this.layers[i];
+      const layer = new Layer(old.id, w, h);
+      layer.name = old.name;
+      layer.patternImage = old.patternImage;
+      layer.patternScale = old.patternScale;
+      layer.patternOpacity = old.patternOpacity;
+      layer.patternAngle = old.patternAngle;
+      layer.overallAngle = old.overallAngle;
+      layer.visible = old.visible;
+      layer.isBlur = old.isBlur;
+      layer.patternOffsetX = old.patternOffsetX - x;
+      layer.patternOffsetY = old.patternOffsetY - y;
+
+      // Crop the mask
+      layer.maskCtx.drawImage(old.maskCanvas, x, y, w, h, 0, 0, w, h);
+      layer.hasMask = this._checkLayerHasMask(layer);
+      layer.invalidateMaskCenter();
+
+      newLayers.push(layer);
+    }
+
+    this.layers = newLayers;
+    this._loadActiveLayerState();
+    this.isCropActive = false;
+    this.cropRect = null;
+    this._resizeDisplay();
+    this._renderToMain();
+    this._emitMaskChanged();
+  }
+
+  _cancelCrop() {
+    this.isCropActive = false;
+    this.cropRect = null;
+    this.isDrawing = false;
+    this._renderToMain();
+  }
+
+  _cloneBaseImage() {
+    const clone = document.createElement('canvas');
+    const src = this.baseImage;
+    clone.width = src.naturalWidth !== undefined ? src.naturalWidth : src.width;
+    clone.height = src.naturalHeight !== undefined ? src.naturalHeight : src.height;
+    clone.getContext('2d').drawImage(src, 0, 0);
+    return clone;
+  }
+
+  _snapshotLayer(layer) {
+    return {
+      maskData: layer.maskCtx.getImageData(0, 0, layer.maskCanvas.width, layer.maskCanvas.height),
+      patternImage: layer.patternImage,
+      patternScale: layer.patternScale,
+      patternOpacity: layer.patternOpacity,
+      patternOffsetX: layer.patternOffsetX,
+      patternOffsetY: layer.patternOffsetY,
+      patternAngle: layer.patternAngle,
+      overallAngle: layer.overallAngle,
+      hasMask: layer.hasMask,
+      name: layer.name,
+      id: layer.id,
+      visible: layer.visible,
+      isBlur: layer.isBlur,
+    };
+  }
+
+  _restoreLayersFromSnapshots(snapshots, activeIdx) {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    this.layers = [];
+    for (const snap of snapshots) {
+      const layer = new Layer(snap.id, w, h);
+      layer.name = snap.name;
+      layer.maskCtx.putImageData(snap.maskData, 0, 0);
+      layer.patternImage = snap.patternImage;
+      layer.patternScale = snap.patternScale;
+      layer.patternOpacity = snap.patternOpacity;
+      layer.patternOffsetX = snap.patternOffsetX;
+      layer.patternOffsetY = snap.patternOffsetY;
+      layer.patternAngle = snap.patternAngle;
+      layer.overallAngle = snap.overallAngle;
+      layer.hasMask = snap.hasMask;
+      layer.visible = snap.visible;
+      layer.isBlur = snap.isBlur;
+      this.layers.push(layer);
+    }
+    this.activeLayerIndex = activeIdx;
+    this._loadActiveLayerState();
   }
 
   // --- Draw on Mask ---

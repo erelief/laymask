@@ -430,7 +430,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.ctrlKey || e.metaKey) return;
 
-  const toolMap = { r: 'rect', e: 'ellipse', b: 'brush', x: 'eraser', v: 'move-pattern' };
+  const toolMap = { r: 'rect', e: 'ellipse', b: 'brush', x: 'eraser', v: 'move-pattern', c: 'crop' };
   const tool = toolMap[e.key.toLowerCase()];
   if (tool && engine.ready) {
     const btn = toolGroup.querySelector(`[data-tool="${tool}"]`);
@@ -1049,6 +1049,10 @@ function updateReadyState() {
   const ready = baseLoaded && patternLoaded;
   const toolBtns = toolGroup.querySelectorAll('.tool-btn');
   toolBtns.forEach(btn => btn.disabled = !ready);
+
+  // Crop tool: enabled with base image only (no pattern needed)
+  const cropBtn = toolGroup.querySelector('[data-tool="crop"]');
+  if (cropBtn) cropBtn.disabled = !baseLoaded;
 
   // In blur mode: hide move-pattern tool entirely
   const moveBtn = toolGroup.querySelector('[data-tool="move-pattern"]');
