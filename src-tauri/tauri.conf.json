@@ -18,9 +18,9 @@
     "windows": [
       {
         "title": "层层加码",
-        "width": 1280,
+        "width": 1320,
         "height": 800,
-        "minWidth": 1150,
+        "minWidth": 1190,
         "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
