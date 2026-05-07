@@ -420,6 +420,16 @@ document.getElementById('btn-select-all').addEventListener('click', () => {
   statusBar.textContent = '已全选 — 可撤销';
 });
 
+// --- Crop action buttons ---
+document.getElementById('crop-confirm').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (engine.isCropActive) engine._applyCrop();
+});
+document.getElementById('crop-cancel').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (engine.isCropActive) engine._cancelCrop();
+});
+
 // --- Keyboard shortcuts for tool switching ---
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;

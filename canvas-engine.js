@@ -74,6 +74,10 @@ export class CanvasEngine {
     this._boundCursorLeave = this._onCursorLeave.bind(this);
     this.canvas.addEventListener('mousemove', this._boundCursorMove);
     this.canvas.addEventListener('mouseleave', this._boundCursorLeave);
+
+    // Crop action buttons
+    this._cropConfirmBtn = document.getElementById('crop-confirm');
+    this._cropCancelBtn = document.getElementById('crop-cancel');
   }
 
   _attachEvents() {
@@ -775,6 +779,7 @@ export class CanvasEngine {
     this.scale = Math.min(containerW / canvasW, containerH / canvasH, 1);
     this.canvas.style.width = Math.round(canvasW * this.scale) + 'px';
     this.canvas.style.height = Math.round(canvasH * this.scale) + 'px';
+    if (this.isCropActive) this._updateCropButtons();
   }
 
   // --- Coordinate Mapping ---
@@ -827,6 +832,7 @@ export class CanvasEngine {
     if (e.target.closest('.modal-overlay')) return;
     if (e.target.closest('.brush-size-dropdown')) return;
     if (e.target.closest('#layers-panel')) return;
+    if (e.target.closest('.crop-action-btn')) return;
     if (this.currentTool === 'move-pattern' && !this._hasMask) return;
 
     // Crop tool: cancel active crop and start new drag
@@ -913,6 +919,8 @@ export class CanvasEngine {
     if (this.currentTool === 'crop') {
       if (this.cropRect && this.cropRect.w >= 5 && this.cropRect.h >= 5) {
         this.isCropActive = true;
+        this._drawCropPreview();
+        this._updateCropButtons();
       } else {
         this._cancelCrop();
       }
@@ -1067,6 +1075,7 @@ export class CanvasEngine {
   _drawCropPreview() {
     if (!this.cropRect) return;
     this._renderToMain();
+    if (this.isCropActive) this._updateCropButtons();
 
     const ctx = this.ctx;
     const cw = this.canvas.width;
@@ -1181,6 +1190,7 @@ export class CanvasEngine {
     this._loadActiveLayerState();
     this.isCropActive = false;
     this.cropRect = null;
+    this._updateCropButtons();
     this._resizeDisplay();
     this._renderToMain();
     this._emitMaskChanged();
@@ -1190,7 +1200,43 @@ export class CanvasEngine {
     this.isCropActive = false;
     this.cropRect = null;
     this.isDrawing = false;
+    this._updateCropButtons();
     this._renderToMain();
+  }
+
+  _updateCropButtons() {
+    if (!this.isCropActive || !this.cropRect) {
+      this._cropConfirmBtn.classList.remove('visible');
+      this._cropCancelBtn.classList.remove('visible');
+      return;
+    }
+    const workspace = document.getElementById('workspace');
+    const wsRect = workspace.getBoundingClientRect();
+    const canvasRect = this.canvas.getBoundingClientRect();
+    const { x, y, w, h } = this.cropRect;
+
+    // Canvas position within workspace
+    const offsetX = canvasRect.left - wsRect.left;
+    const offsetY = canvasRect.top - wsRect.top;
+
+    // Crop rect in workspace coordinates
+    const cx = offsetX + x * this.scale;
+    const cy = offsetY + y * this.scale;
+    const cw = w * this.scale;
+    const ch = h * this.scale;
+
+    const gap = 4;
+    const btnW = 30;
+    const rightEdge = cx + cw;
+    const bottomEdge = cy + ch;
+
+    this._cropCancelBtn.style.left = (rightEdge - btnW * 2 - gap) + 'px';
+    this._cropCancelBtn.style.top = (bottomEdge + gap) + 'px';
+    this._cropConfirmBtn.style.left = (rightEdge - btnW) + 'px';
+    this._cropConfirmBtn.style.top = (bottomEdge + gap) + 'px';
+
+    this._cropConfirmBtn.classList.add('visible');
+    this._cropCancelBtn.classList.add('visible');
   }
 
   _cloneBaseImage() {

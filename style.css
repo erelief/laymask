@@ -462,6 +462,33 @@ input[type="range"]::-moz-range-thumb {
   display: block;
 }
 
+.crop-action-btn {
+  display: none;
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  z-index: 60;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 30, 40, 0.9);
+  color: rgba(255, 255, 255, 0.8);
+  transition: background 0.15s, color 0.15s;
+  backdrop-filter: blur(8px);
+}
+
+.crop-action-btn.visible {
+  display: flex;
+}
+
+.crop-action-btn:hover {
+  background: rgba(50, 50, 65, 0.95);
+  color: #fff;
+}
+
 #main-canvas {
   display: block;
   box-shadow: 0 0 60px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255,255,255,0.05);
