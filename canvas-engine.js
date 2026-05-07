@@ -43,6 +43,8 @@ export class CanvasEngine {
     // Crop state
     this.isCropActive = false;
     this.cropRect = null;
+    this._cropResizeHandle = null;   // 'n','s','e','w','nw','ne','sw','se' or null
+    this._cropResizeStart = null;    // snapshot of cropRect at drag start
 
     // Undo/Redo (global)
     this.undoStack = [];
@@ -798,6 +800,7 @@ export class CanvasEngine {
     this._cursorClientX = e.clientX;
     this._cursorClientY = e.clientY;
     this._updateBrushCursor();
+    this._updateCropCursor(e);
   }
 
   _onCursorLeave() {
@@ -823,6 +826,13 @@ export class CanvasEngine {
     this._updateBrushCursor();
   }
 
+  _updateCropCursor(e) {
+    if (this.currentTool !== 'crop' || !this.isCropActive || this.isDrawing) return;
+    const { x, y } = this._getCanvasCoords(e);
+    const cursor = this._getCropResizeCursor(x, y);
+    this.canvas.style.cursor = cursor || 'crosshair';
+  }
+
   // --- Mouse Handlers ---
 
   _onMouseDown(e) {
@@ -835,14 +845,25 @@ export class CanvasEngine {
     if (e.target.closest('.crop-action-btn')) return;
     if (this.currentTool === 'move-pattern' && !this._hasMask) return;
 
-    // Crop tool: cancel active crop and start new drag
+    // Crop tool
     if (this.currentTool === 'crop') {
+      e.preventDefault();
+      const { x, y } = this._getCanvasCoords(e);
+      // Check if clicking on a resize handle
+      if (this.isCropActive && this.cropRect) {
+        const handle = this._getCropResizeHandle(x, y);
+        if (handle) {
+          this.isDrawing = true;
+          this._cropResizeHandle = handle;
+          this._cropResizeStart = { ...this.cropRect, mx: x, my: y };
+          return;
+        }
+      }
+      // Start a new crop rectangle
       if (this.isCropActive) {
         this._cancelCrop();
       }
-      e.preventDefault();
       this.isDrawing = true;
-      const { x, y } = this._getCanvasCoords(e);
       this.startX = x;
       this.startY = y;
       this.currentX = x;
@@ -873,17 +894,22 @@ export class CanvasEngine {
     this.currentY = y;
 
     if (this.currentTool === 'crop') {
-      const cx = Math.max(0, Math.min(this.currentX, this.canvas.width));
-      const cy = Math.max(0, Math.min(this.currentY, this.canvas.height));
-      const sx = Math.max(0, Math.min(this.startX, this.canvas.width));
-      const sy = Math.max(0, Math.min(this.startY, this.canvas.height));
-      this.cropRect = {
-        x: Math.min(sx, cx),
-        y: Math.min(sy, cy),
-        w: Math.abs(cx - sx),
-        h: Math.abs(cy - sy),
-      };
+      if (this._cropResizeHandle) {
+        this._resizeCrop(x, y);
+      } else {
+        const cx = Math.max(0, Math.min(this.currentX, this.canvas.width));
+        const cy = Math.max(0, Math.min(this.currentY, this.canvas.height));
+        const sx = Math.max(0, Math.min(this.startX, this.canvas.width));
+        const sy = Math.max(0, Math.min(this.startY, this.canvas.height));
+        this.cropRect = {
+          x: Math.min(sx, cx),
+          y: Math.min(sy, cy),
+          w: Math.abs(cx - sx),
+          h: Math.abs(cy - sy),
+        };
+      }
       this._drawCropPreview();
+      if (this.isCropActive) this._updateCropButtons();
       return;
     }
 
@@ -917,6 +943,8 @@ export class CanvasEngine {
     this.currentY = y;
 
     if (this.currentTool === 'crop') {
+      this._cropResizeHandle = null;
+      this._cropResizeStart = null;
       if (this.cropRect && this.cropRect.w >= 5 && this.cropRect.h >= 5) {
         this.isCropActive = true;
         this._drawCropPreview();
@@ -1070,6 +1098,64 @@ export class CanvasEngine {
     }
 
     ctx.restore();
+  }
+
+  _getCropResizeHandle(px, py) {
+    if (!this.cropRect) return null;
+    const { x, y, w, h } = this.cropRect;
+    const threshold = 8 / this.scale; // 8 CSS pixels
+    const nearLeft   = Math.abs(px - x) < threshold;
+    const nearRight  = Math.abs(px - (x + w)) < threshold;
+    const nearTop    = Math.abs(py - y) < threshold;
+    const nearBottom = Math.abs(py - (y + h)) < threshold;
+    const insideX = px >= x - threshold && px <= x + w + threshold;
+    const insideY = py >= y - threshold && py <= y + h + threshold;
+
+    if (nearTop && nearLeft)     return 'nw';
+    if (nearTop && nearRight)    return 'ne';
+    if (nearBottom && nearLeft)  return 'sw';
+    if (nearBottom && nearRight) return 'se';
+    if (nearTop && insideX)      return 'n';
+    if (nearBottom && insideX)   return 's';
+    if (nearLeft && insideY)     return 'w';
+    if (nearRight && insideY)    return 'e';
+    return null;
+  }
+
+  _getCropResizeCursor(px, py) {
+    const handle = this._getCropResizeHandle(px, py);
+    const cursors = {
+      n: 'ns-resize', s: 'ns-resize',
+      e: 'ew-resize', w: 'ew-resize',
+      nw: 'nwse-resize', se: 'nwse-resize',
+      ne: 'nesw-resize', sw: 'nesw-resize',
+    };
+    return cursors[handle] || null;
+  }
+
+  _resizeCrop(px, py) {
+    const s = this._cropResizeStart;
+    const dx = px - s.mx;
+    const dy = py - s.my;
+    const handle = this._cropResizeHandle;
+    let { x, y, w, h } = s;
+
+    if (handle.includes('w')) { x = s.x + dx; w = s.w - dx; }
+    if (handle.includes('e')) { w = s.w + dx; }
+    if (handle.includes('n')) { y = s.y + dy; h = s.h - dy; }
+    if (handle.includes('s')) { h = s.h + dy; }
+
+    // Normalize (allow flipping)
+    if (w < 0) { x += w; w = -w; }
+    if (h < 0) { y += h; h = -h; }
+
+    // Clamp to canvas
+    x = Math.max(0, x);
+    y = Math.max(0, y);
+    w = Math.min(w, this.canvas.width - x);
+    h = Math.min(h, this.canvas.height - y);
+
+    this.cropRect = { x, y, w, h };
   }
 
   _drawCropPreview() {
