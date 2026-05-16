@@ -394,7 +394,32 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .pattern-angle-group .icon-label {
+  cursor: default;
+}
+
+.editable-value {
+  cursor: text;
+}
+
+.drag-scrub-btn {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
   cursor: ns-resize;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+
+.drag-scrub-btn:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
 }
 
 .pattern-angle-value {
@@ -1580,7 +1605,6 @@ input[type="range"]::-moz-range-thumb {
   text-align: center;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
-  cursor: text;
   color: var(--text-primary);
   font-weight: 600;
 }
@@ -1597,7 +1621,6 @@ input[type="range"]::-moz-range-thumb {
   width: 48px;
   text-align: center;
   font-variant-numeric: tabular-nums;
-  cursor: text;
 }
 
 #save-file-size {

@@ -43,18 +43,20 @@
 
       <div class="toolbar-group" id="pattern-settings-group" style="display: none;">
         <div class="pattern-size-group">
-          <span class="icon-label" title="图案大小"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M17 21h2a2 2 0 0 0 2-2"/><path d="M21 12v3"/><path d="m21 3-5 5"/><path d="M3 7V5a2 2 0 0 1 2-2"/><path d="m5 21 4.144-4.144a1.21 1.21 0 0 1 1.712 0L13 19"/><path d="M9 3h3"/><rect x="3" y="11" width="10" height="10" rx="1"/></svg><span id="pattern-size-value">100</span>%</span>
+          <span class="icon-label" title="图案大小"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M17 21h2a2 2 0 0 0 2-2"/><path d="M21 12v3"/><path d="m21 3-5 5"/><path d="M3 7V5a2 2 0 0 1 2-2"/><path d="m5 21 4.144-4.144a1.21 1.21 0 0 1 1.712 0L13 19"/><path d="M9 3h3"/><rect x="3" y="11" width="10" height="10" rx="1"/></svg><span class="editable-value" id="pattern-size-value">100</span>%</span>
           <input type="range" id="pattern-size" min="10" max="300" value="100" step="5" />
         </div>
         <div class="pattern-opacity-group">
-          <span class="icon-label" title="图案透明度"><svg id="opacity-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect width="18" height="18" x="3" y="3" rx="4"/></svg><span id="pattern-opacity-value">100</span>%</span>
+          <span class="icon-label" title="图案透明度"><svg id="opacity-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect width="18" height="18" x="3" y="3" rx="4"/></svg><span class="editable-value" id="pattern-opacity-value">100</span>%</span>
           <input type="range" id="pattern-opacity" min="5" max="100" value="100" step="5" />
         </div>
         <div class="pattern-angle-group">
-          <span class="icon-label" title="单个图案角度"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span class="pattern-angle-value" id="pattern-angle-value">0</span>°</span>
+          <span class="icon-label" title="单个图案角度"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg><span class="pattern-angle-value editable-value" id="pattern-angle-value">0</span>°</span>
+          <button class="drag-scrub-btn" id="pattern-angle-scrub" title="拖动调节角度"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>
         </div>
         <div class="pattern-angle-group">
-          <span class="icon-label" title="整体图案角度"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V7a2 2 0 0 0-2-2h-6"/><path d="m15 2-3 3 3 3"/><path d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span class="pattern-angle-value" id="overall-angle-value">0</span>°</span>
+          <span class="icon-label" title="整体图案角度"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 9V7a2 2 0 0 0-2-2h-6"/><path d="m15 2-3 3 3 3"/><path d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/></svg><span class="pattern-angle-value editable-value" id="overall-angle-value">0</span>°</span>
+          <button class="drag-scrub-btn" id="overall-angle-scrub" title="拖动调节角度"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></button>
         </div>
         <button class="btn action-btn" id="btn-reset-pattern" title="重置图案属性"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H3"/><path d="M7 12H3"/><path d="M7 19H3"/><path d="M12 18a5 5 0 0 0 9-3 4.5 4.5 0 0 0-4.5-4.5c-1.33 0-2.54.54-3.41 1.41L11 14"/><path d="M11 10v4h4"/></svg></button>
       </div>
@@ -161,8 +163,8 @@
         <div class="modal-controls">
           <div class="modal-control-row">
             <label class="modal-label">模糊强度</label>
-            <input type="range" id="blur-intensity" min="1" max="40" value="10" />
-            <span class="blur-intensity-value" id="blur-intensity-value">10</span>
+            <input type="range" id="blur-intensity" min="1" max="40" value="20" />
+            <span class="blur-intensity-value editable-value" id="blur-intensity-value">20</span>
           </div>
         </div>
       </div>
@@ -176,7 +178,7 @@
   <div class="brush-size-dropdown" id="brush-size-dropdown">
     <div class="brush-size-dropdown-row">
       <span class="brush-size-circle" id="brush-size-circle"></span>
-      <span class="brush-size-dropdown-value" id="brush-size-value">15</span><span class="brush-size-dropdown-unit">%</span>
+      <span class="brush-size-dropdown-value editable-value" id="brush-size-value">15</span><span class="brush-size-dropdown-unit">%</span>
       <input type="range" id="brush-size" min="5" max="50" value="15" />
     </div>
   </div>
@@ -288,16 +290,16 @@
           <div class="modal-control-row" id="quality-row">
             <label class="modal-label">质量</label>
             <input type="range" id="save-quality" min="10" max="100" value="90" step="5" />
-            <span id="save-quality-value">90</span>%
+            <span class="editable-value" id="save-quality-value">90</span>%
           </div>
           <div class="modal-control-row">
             <label class="modal-label">分辨率</label>
             <input type="range" id="save-resolution" min="10" max="300" value="100" step="1" />
-            <span id="save-resolution-value">100</span>%
+            <span class="editable-value" id="save-resolution-value">100</span>%
           </div>
           <div class="modal-control-row">
             <span class="modal-label">尺寸</span>
-            <span id="save-size-info"><span id="save-size-w">-</span> x <span id="save-size-h">-</span></span>
+            <span id="save-size-info"><span class="editable-value" id="save-size-w">-</span> x <span class="editable-value" id="save-size-h">-</span></span>
           </div>
           <div class="modal-control-row">
             <span class="modal-label">预估大小</span>

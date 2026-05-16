@@ -542,13 +542,14 @@ btnResetPattern.addEventListener('click', () => {
   statusBar.textContent = '图案属性已重置';
 });
 
-// --- Pattern Angle (drag-to-scrub) ---
+// --- Pattern Angle (drag-to-scrub on chevron) ---
 let patternAngleDragging = false;
 (function () {
   let startY = 0;
   let startAngle = 0;
+  const scrubBtn = document.getElementById('pattern-angle-scrub');
 
-  patternAngleValue.addEventListener('mousedown', (e) => {
+  scrubBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
     patternAngleDragging = true;
     startY = e.clientY;
@@ -576,13 +577,14 @@ let patternAngleDragging = false;
   });
 })();
 
-// --- Overall Angle (drag-to-scrub) ---
+// --- Overall Angle (drag-to-scrub on chevron) ---
 let overallAngleDragging = false;
 (function () {
   let startY = 0;
   let startAngle = 0;
+  const scrubBtn = document.getElementById('overall-angle-scrub');
 
-  overallAngleValue.addEventListener('mousedown', (e) => {
+  scrubBtn.addEventListener('mousedown', (e) => {
     e.preventDefault();
     overallAngleDragging = true;
     startY = e.clientY;
@@ -610,8 +612,8 @@ let overallAngleDragging = false;
   });
 })();
 
-// --- Inline Edit (double-click to type a value) ---
-function enableInlineEdit(displayEl, { min, max, normalize, apply, onCancelDrag }) {
+// --- Inline Edit (click to type a value) ---
+function enableInlineEdit(displayEl, { min, max, normalize, apply, onCancelDrag, guard }) {
   let input = null;
   let originalValue = 0;
 
@@ -637,8 +639,10 @@ function enableInlineEdit(displayEl, { min, max, normalize, apply, onCancelDrag 
     input = null;
   }
 
-  displayEl.addEventListener('dblclick', (e) => {
+  displayEl.addEventListener('click', (e) => {
     e.preventDefault();
+    if (input) return; // already editing
+    if (guard && !guard()) return;
     if (onCancelDrag) onCancelDrag();
     document.body.style.cursor = '';
     originalValue = parseInt(displayEl.textContent, 10);
@@ -670,7 +674,7 @@ function enableInlineEdit(displayEl, { min, max, normalize, apply, onCancelDrag 
 const normalizeAngle = (v) => ((v % 360) + 360) % 360;
 
 enableInlineEdit(patternSizeValue, {
-  min: 10, max: 300,
+  min: 10, max: 300, guard: () => engine.ready,
   apply(val, old) {
     engine.saveScaleUndo(old);
     engine.setPatternScale(val);
@@ -679,7 +683,7 @@ enableInlineEdit(patternSizeValue, {
 });
 
 enableInlineEdit(patternOpacityValue, {
-  min: 5, max: 100,
+  min: 5, max: 100, guard: () => engine.ready,
   apply(val, old) {
     engine.saveOpacityUndo(old);
     engine.setPatternOpacity(val);
@@ -689,15 +693,33 @@ enableInlineEdit(patternOpacityValue, {
 });
 
 enableInlineEdit(patternAngleValue, {
-  min: 0, max: 359, normalize: normalizeAngle,
+  min: 0, max: 359, normalize: normalizeAngle, guard: () => engine.ready,
   apply(val, old) { engine.saveAngleUndo(old); engine.setPatternAngle(val); },
   onCancelDrag: () => { patternAngleDragging = false; },
 });
 
 enableInlineEdit(overallAngleValue, {
-  min: 0, max: 359, normalize: normalizeAngle,
+  min: 0, max: 359, normalize: normalizeAngle, guard: () => engine.ready,
   apply(val, old) { engine.saveOverallAngleUndo(old); engine.setOverallAngle(val); },
   onCancelDrag: () => { overallAngleDragging = false; },
+});
+
+enableInlineEdit(blurIntensityValue, {
+  min: 1, max: 40,
+  apply(val) {
+    blurIntensityInput.value = val;
+    renderBlurPreview();
+  },
+});
+
+enableInlineEdit(brushSizeValue, {
+  min: 5, max: 50,
+  apply(val) {
+    brushSizeInput.value = val;
+    engine.setBrushSize(val);
+    updateBrushSizeCircle(val);
+    engine.refreshBrushCursor();
+  },
 });
 
 // --- Actions ---
@@ -1553,7 +1575,7 @@ function generateBlurredImage(baseImage, blurRadius) {
 function renderBlurPreview() {
   if (!engine.baseImage) return;
   const ctx = blurPreviewCanvas.getContext('2d');
-  const radius = parseInt(blurIntensityInput.value, 10) || 10;
+  const radius = parseInt(blurIntensityInput.value, 10) || 20;
 
   const imgW = engine.baseImage.naturalWidth;
   const imgH = engine.baseImage.naturalHeight;
@@ -1597,7 +1619,7 @@ blurIntensityInput.addEventListener('input', (e) => {
 blurModalConfirm.addEventListener('click', () => {
   if (!baseLoaded) return;
 
-  const blurRadius = parseInt(blurIntensityInput.value, 10) || 10;
+  const blurRadius = parseInt(blurIntensityInput.value, 10) || 20;
   const blurredCanvas = generateBlurredImage(engine.baseImage, blurRadius);
   const dataUrl = blurredCanvas.toDataURL('image/png');
 
