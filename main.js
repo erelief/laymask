@@ -1767,7 +1767,7 @@ renderDeps(__ABOUT_DEPS__);
   async function checkForUpdate({ silent = false } = {}) {
     btnCheck.classList.add('btn-checking');
     btnCheck.disabled = true;
-    btnCheck.textContent = '检查中...';
+    btnCheck.innerHTML = '<svg class="spin-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> 检查中...';
 
     try {
       const update = await check();
