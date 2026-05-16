@@ -1847,12 +1847,14 @@ renderDeps(__ABOUT_DEPS__);
       }, { once: true });
 
     } catch (e) {
+      console.error('[Updater] check failed:', e);
       if (!silent) {
         btnCheck.classList.remove('btn-checking');
         btnCheck.classList.add('btn-error');
         btnCheck.disabled = false;
-        btnCheck.textContent = '检查失败';
-        setTimeout(resetBtn, 3000);
+        const msg = e instanceof Error ? e.message : String(e);
+        btnCheck.textContent = msg ? '失败: ' + msg.slice(0, 30) : '检查失败';
+        setTimeout(resetBtn, 4000);
       } else {
         resetBtn();
       }
