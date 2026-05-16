@@ -1114,7 +1114,7 @@ function updateReadyState() {
   btnExport.disabled = !ready || !engine.hasMask;
   btnExportLayers.disabled = !ready || !engine.hasMask;
   btnCopy.disabled = !ready || !engine.hasMask;
-  patternSettingsGroup.style.display = patternLoaded ? 'flex' : 'none';
+  patternSettingsGroup.style.display = (baseLoaded && patternLoaded) ? 'flex' : 'none';
   patternSettingsGroup.classList.toggle('blur-mode', patternLoaded && isBlurPattern);
 
   if (ready) {
