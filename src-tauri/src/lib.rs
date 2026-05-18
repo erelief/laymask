@@ -76,6 +76,21 @@ fn compress_and_save_png(data: Vec<u8>, path: String) -> Result<String, String> 
     ))
 }
 
+fn read_proxy_url() -> Option<String> {
+    std::env::var("HTTPS_PROXY")
+        .or_else(|_| std::env::var("https_proxy"))
+        .or_else(|_| std::env::var("HTTP_PROXY"))
+        .or_else(|_| std::env::var("http_proxy"))
+        .or_else(|_| std::env::var("ALL_PROXY"))
+        .or_else(|_| std::env::var("all_proxy"))
+        .ok()
+}
+
+#[tauri::command]
+fn get_proxy_url() -> Option<String> {
+    read_proxy_url()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -117,7 +132,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_opened_files, write_image_to_clipboard, compress_and_save_png])
+        .invoke_handler(tauri::generate_handler![get_opened_files, write_image_to_clipboard, compress_and_save_png, get_proxy_url])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
